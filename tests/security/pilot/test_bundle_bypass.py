@@ -272,6 +272,11 @@ class TestHookDisablingSurfaced:
         hooks_dir = rapid7_root / ".claude" / "hooks"
         hooks_dir.mkdir(parents=True, exist_ok=True)
         (hooks_dir / "DISABLED").write_text("disabled\n", encoding="utf-8")
-        assert main(_audit(customer_repo)) == EXIT_OK
-        out = capsys.readouterr().out
-        assert "DISABLED" in out or "hooks" in out.lower()
+        argv = [*_audit(customer_repo), "--json"]
+        assert main(argv) == EXIT_OK
+        report = json.loads(capsys.readouterr().out)["report"]
+        # The pilot SHOULD surface a disabled-hooks finding — a boundary/preflight
+        # finding code or a suggested human action naming the hooks safety layer.
+        finding_codes = {f["code"] for f in report["boundary"]["findings"]}
+        actions_blob = " ".join(report["suggested_human_actions"]).lower()
+        assert "hooks_disabled" in finding_codes or "hook" in actions_blob
