@@ -86,6 +86,7 @@ _VALIDATOR_SOURCE = textwrap.dedent(
         vm = sub.add_parser("validate-manifest")
         vm.add_argument("--manifest", required=True)
         vs = sub.add_parser("validate-skills")
+        vs.add_argument("--manifest", required=True)
         vs.add_argument("--skills-root", required=True)
         args = parser.parse_args()
 

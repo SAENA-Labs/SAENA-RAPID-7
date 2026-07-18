@@ -124,6 +124,8 @@ def enforce_bundle(rapid7_root: Path, *, runner: SubprocessRunner | None = None)
             sys.executable,
             str(validator_path),
             "validate-skills",
+            "--manifest",
+            str(manifest_path),
             "--skills-root",
             str(rapid7_root / ".claude" / "skills"),
         ),
