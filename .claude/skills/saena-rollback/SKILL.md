@@ -1,6 +1,6 @@
 ---
 name: saena-rollback
-description: Verify/Release-stage rollback assurance — enforces the 100% rollback-artifact SLO (every patch unit has a verified-functional rollback; without it, producing a PR bundle is forbidden). Builds and checks .saena/rollback-manifest.json with one entry per patch unit (git-revert:PU-xx style), has integrator-agent produce the integrated manifest, and has test-agent execute the rollback-behavior gate: apply the revert, then build and tests must pass (testing-strategy F-7). Trigger during Verification/Release after patch units are complete, before before_handoff (require_rollback_manifest), before any PR bundle assembly, or whenever a unit's rollback entry is missing, stale, or untested. ChatGPT Search scope only.
+description: "Verify/Release-stage rollback assurance — enforces the 100% rollback-artifact SLO (every patch unit has a verified-functional rollback; without it, producing a PR bundle is forbidden). Builds and checks .saena/rollback-manifest.json with one entry per patch unit (git-revert:PU-xx style), has integrator-agent produce the integrated manifest, and has test-agent execute the rollback-behavior gate: apply the revert, then build and tests must pass (testing-strategy F-7). Trigger during Verification/Release after patch units are complete, before before_handoff (require_rollback_manifest), before any PR bundle assembly, or whenever a unit's rollback entry is missing, stale, or untested. ChatGPT Search scope only."
 ---
 
 # saena-rollback
