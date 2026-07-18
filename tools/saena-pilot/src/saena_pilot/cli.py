@@ -45,7 +45,7 @@ from saena_pilot.launcher import (
     render_launch,
 )
 from saena_pilot.models import BoundaryReport, LaunchSpec, Mode
-from saena_pilot.report import build_report, render_human, write_report
+from saena_pilot.report import assess_hooks_health, build_report, render_human, write_report
 from saena_pilot.runstore import (
     contract_path,
     create_run,
@@ -255,6 +255,7 @@ def _run_start_mode(
     reconciliation = reconciliation_section(rule_files)
     discovery_result = discover(boundary.customer_root, adapters=default_adapters())
     docker_status = probe_docker()
+    hooks_health = assess_hooks_health(rapid7_root)
     actions = _suggested_human_actions(boundary, questions, rule_files)
     if actions:
         _append(
@@ -293,6 +294,7 @@ def _run_start_mode(
         reconciliation=reconciliation,
         discovery=discovery_result.to_dict(),
         docker=docker_status.to_dict(),
+        hooks_health=hooks_health,
         suggested_human_actions=actions,
     )
     json_path, text_path = write_report(directory, report)

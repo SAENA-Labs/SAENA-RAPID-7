@@ -16,6 +16,50 @@ from saena_pilot.secretguard import guard_tree
 
 REPORT_SCHEMA_VERSION = "saena.pilot-report/v1"
 
+# The five W0 dev-repo safety hooks (ADR-0019). The pilot keeps them active by
+# launching Claude from the RAPID-7 root; surfacing their health in preflight is
+# a safety signal — a present `.claude/hooks/DISABLED` kill-switch means the
+# safety layer is OFF for this run (VULN/finding surfaced, w6-13).
+_EXPECTED_HOOK_SCRIPTS = (
+    "deny-deploy-push.sh",
+    "deny-unpinned-install.sh",
+    "protect-paths.sh",
+    "audit-log.sh",
+    "secret-scan.sh",
+)
+
+
+def assess_hooks_health(rapid7_root: Path) -> dict[str, Any]:
+    """Report the RAPID-7 hook safety layer's health (never mutates anything).
+
+    `hooks_disabled` True means `.claude/hooks/DISABLED` exists — the safety
+    hooks are bypassed for this session; the pilot surfaces it as a WARNING
+    finding rather than failing, because disabling is an explicit,
+    audit-logged human action, but an operator must see it.
+    """
+    hooks_dir = rapid7_root / ".claude" / "hooks"
+    settings = rapid7_root / ".claude" / "settings.json"
+    disabled = (hooks_dir / "DISABLED").exists()
+    present = [name for name in _EXPECTED_HOOK_SCRIPTS if (hooks_dir / "scripts" / name).is_file()]
+    missing = [name for name in _EXPECTED_HOOK_SCRIPTS if name not in present]
+    warnings: list[str] = []
+    if disabled:
+        warnings.append(
+            "hooks DISABLED: .claude/hooks/DISABLED is present — the W0 dev-repo "
+            "safety hooks are bypassed for this session"
+        )
+    if not settings.is_file():
+        warnings.append("hooks settings missing: .claude/settings.json not found")
+    if missing:
+        warnings.append(f"hook scripts missing: {', '.join(missing)}")
+    return {
+        "settings_present": settings.is_file(),
+        "hooks_disabled": disabled,
+        "hook_scripts_present": present,
+        "hook_scripts_missing": missing,
+        "warnings": warnings,
+    }
+
 
 def build_report(
     *,
@@ -31,6 +75,7 @@ def build_report(
     discovery: dict[str, Any],
     suggested_human_actions: list[str],
     docker: dict[str, Any] | None = None,
+    hooks_health: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     report = {
         "schema_version": REPORT_SCHEMA_VERSION,
@@ -49,6 +94,7 @@ def build_report(
         "stricter_rules_reconciliation": reconciliation,
         "discovery": discovery,
         "docker": docker,
+        "hooks_health": hooks_health,
         "suggested_human_actions": suggested_human_actions,
     }
     guard_tree(report, path="report")
@@ -110,6 +156,18 @@ def render_human(report: dict[str, Any]) -> str:
         )
         if docker.get("error_detail"):
             lines.append(f"  detail: {docker['error_detail']}")
+    hooks_health = report.get("hooks_health")
+    if hooks_health is not None:
+        lines.append("")
+        status = "DISABLED" if hooks_health["hooks_disabled"] else "active"
+        n_present = len(hooks_health["hook_scripts_present"])
+        n_total = n_present + len(hooks_health["hook_scripts_missing"])
+        lines.append(
+            f"hooks: {status} — {n_present}/{n_total} scripts present, "
+            f"settings_present={hooks_health['settings_present']}"
+        )
+        for warning in hooks_health["warnings"]:
+            lines.append(f"  [WARN] {warning}")
     if report["suggested_human_actions"]:
         lines.append("")
         lines.append("suggested external/operational actions (HUMAN decision only):")

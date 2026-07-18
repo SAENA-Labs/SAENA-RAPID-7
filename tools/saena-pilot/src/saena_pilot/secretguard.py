@@ -32,6 +32,12 @@ _SECRET_SHAPED_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(
         r"\b[sr]k-(live|test)-[A-Za-z0-9]{10,}"
     ),  # hyphen-infix variant (sk-live-…, c5-06 audit)
+    # Modern default-issuance formats (VULN-2, w6-13). The `sk-[A-Za-z0-9]{20,}`
+    # run above breaks on the `-proj-`/`-svcacct-` hyphen, so these need their
+    # own anchors:
+    re.compile(r"sk-(proj|svcacct|admin)-[A-Za-z0-9_-]{20,}"),  # OpenAI project/service keys
+    re.compile(r"github_pat_[A-Za-z0-9_]{22,}"),  # GitHub fine-grained PAT
+    re.compile(r"\bglpat-[A-Za-z0-9_-]{20,}"),  # GitLab PAT
 )
 
 
