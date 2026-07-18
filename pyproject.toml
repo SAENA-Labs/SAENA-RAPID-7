@@ -40,6 +40,7 @@ members = [
     "services/platform/engine-adapter-gateway",
     "services/platform/agent-runner-service",
     "tools/forgectl",
+    "tools/saena-pilot",
 ]
 
 [dependency-groups]
@@ -67,6 +68,7 @@ dev = [
     "saena-engine-gateway",
     "saena-agent-runner",
     "saena-forgectl",
+    "saena-pilot",
     "saena-hooks-runtime",
     "saena-analytics-clickhouse",
     "saena-vector-store",
@@ -104,6 +106,7 @@ saena-artifact-registry = { workspace = true }
 saena-engine-gateway = { workspace = true }
 saena-agent-runner = { workspace = true }
 saena-forgectl = { workspace = true }
+saena-pilot = { workspace = true }
 saena-hooks-runtime = { workspace = true }
 saena-analytics-clickhouse = { workspace = true }
 saena-vector-store = { workspace = true }
@@ -138,7 +141,7 @@ strict = false
 warn_unused_ignores = true
 warn_redundant_casts = true
 disallow_untyped_defs = true
-files = ["packages", "services", "tools/forgectl/src"]
+files = ["packages", "services", "tools/forgectl/src", "tools/saena-pilot/src"]
 
 [[tool.mypy.overrides]]
 # clickhouse-connect ships no py.typed marker / stubs (w4-06). The
@@ -162,7 +165,13 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["packages", "services", "tests/contract/harness", "tools/forgectl/src"]
+source = [
+    "packages",
+    "services",
+    "tests/contract/harness",
+    "tools/forgectl/src",
+    "tools/saena-pilot/src",
+]
 # Exclusions must be explicit per ADR-0017 — no implicit patterns.
 # packages/schemas/saena_schemas/* is 100% codegen output (ADR-0011 SSOT
 # split; packages/schemas/README.md) — coverage over generated pydantic
