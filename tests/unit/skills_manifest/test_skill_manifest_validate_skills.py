@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import (
+from _manifest_fixtures import (
     make_skill_md,
     run_cli,
     skill_manifest,

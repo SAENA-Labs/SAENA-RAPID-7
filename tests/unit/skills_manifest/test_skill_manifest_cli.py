@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import (
+from _manifest_fixtures import (
     REAL_MANIFEST_PATH,
     run_cli,
     skill_manifest,
