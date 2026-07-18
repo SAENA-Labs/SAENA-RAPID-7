@@ -1,65 +1,36 @@
-"""Framework discovery seam (w6-11 placeholder — w6-12 fills adapters).
+"""Framework discovery (w6-12): typed seam + deterministic adapters.
 
-This module defines the typed interface only. The default `discover()` is
-honest about what this unit knows: nothing — it returns `UNKNOWN` unless an
-adapter (landing in `tools/saena-pilot/src/saena_pilot/discovery/` in unit
-w6-12) positively identifies the framework. No adapter may guess: a result is
-either a positive detection or `UNKNOWN`/`UNSUPPORTED`.
+Public surface is unchanged from the w6-11 seam (`DiscoveryResult`,
+`DiscoveryAdapter`, `SupportStatus`, `UNKNOWN_RESULT`, `discover`) plus the
+w6-12 adapters (`FrameworkDiscovery`, `FrameworkDetector`,
+`default_adapters`). `discover()` with no adapters still returns the honest
+`UNKNOWN_RESULT` — detection only happens when adapters are passed in.
+
+All detection is pure file inspection: no network, no dependency
+installation, no execution of customer-repo content. Customer file contents
+are untrusted DATA and are only ever reported verbatim or summarized.
 """
 
-from __future__ import annotations
-
-from collections.abc import Sequence
-from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
-from typing import Any, Protocol
-
-
-class SupportStatus(str, Enum):
-    SUPPORTED = "SUPPORTED"
-    UNSUPPORTED = "UNSUPPORTED"
-    UNKNOWN = "UNKNOWN"
-
-
-@dataclass(frozen=True, slots=True)
-class DiscoveryResult:
-    """Outcome of framework discovery over the customer root."""
-
-    framework: str
-    status: SupportStatus
-    detail: str
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "framework": self.framework,
-            "status": self.status.value,
-            "detail": self.detail,
-        }
-
-
-class DiscoveryAdapter(Protocol):
-    """One framework detector (w6-12). Returns a positive `DiscoveryResult`
-    or `None` when this adapter cannot identify the repo."""
-
-    def detect(self, customer_root: Path) -> DiscoveryResult | None: ...
-
-
-#: Honest default when no adapter matches (or none are installed yet).
-UNKNOWN_RESULT = DiscoveryResult(
-    framework="unknown",
-    status=SupportStatus.UNKNOWN,
-    detail=(
-        "framework discovery adapters are not installed in this unit (w6-12 "
-        "provides them); no detection was attempted"
-    ),
+from saena_pilot.discovery._seam import (
+    UNKNOWN_RESULT,
+    DiscoveryAdapter,
+    DiscoveryResult,
+    SupportStatus,
+    discover,
+)
+from saena_pilot.discovery.adapters import (
+    FrameworkDetector,
+    FrameworkDiscovery,
+    default_adapters,
 )
 
-
-def discover(customer_root: Path, adapters: Sequence[DiscoveryAdapter] = ()) -> DiscoveryResult:
-    """Run adapters in order; first positive detection wins, else UNKNOWN."""
-    for adapter in adapters:
-        result = adapter.detect(customer_root)
-        if result is not None:
-            return result
-    return UNKNOWN_RESULT
+__all__ = [
+    "UNKNOWN_RESULT",
+    "DiscoveryAdapter",
+    "DiscoveryResult",
+    "FrameworkDetector",
+    "FrameworkDiscovery",
+    "SupportStatus",
+    "default_adapters",
+    "discover",
+]

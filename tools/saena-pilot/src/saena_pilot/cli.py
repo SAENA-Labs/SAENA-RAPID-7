@@ -24,7 +24,8 @@ from saena_pilot import __version__
 from saena_pilot._git import git_head_sha, git_toplevel
 from saena_pilot.boundary import validate_customer_repo
 from saena_pilot.bundle import SubprocessRunner, enforce_bundle
-from saena_pilot.discovery import discover
+from saena_pilot.discovery import default_adapters, discover
+from saena_pilot.docker_preflight import probe_docker
 from saena_pilot.domain import validate_domain
 from saena_pilot.errors import (
     BoundaryViolationError,
@@ -252,7 +253,8 @@ def _run_start_mode(
 
     rule_files = list_rule_files(boundary.customer_root)
     reconciliation = reconciliation_section(rule_files)
-    discovery_result = discover(boundary.customer_root)
+    discovery_result = discover(boundary.customer_root, adapters=default_adapters())
+    docker_status = probe_docker()
     actions = _suggested_human_actions(boundary, questions, rule_files)
     if actions:
         _append(
@@ -290,6 +292,7 @@ def _run_start_mode(
         contract_questions=questions,
         reconciliation=reconciliation,
         discovery=discovery_result.to_dict(),
+        docker=docker_status.to_dict(),
         suggested_human_actions=actions,
     )
     json_path, text_path = write_report(directory, report)

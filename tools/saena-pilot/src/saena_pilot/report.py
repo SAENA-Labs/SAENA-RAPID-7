@@ -30,6 +30,7 @@ def build_report(
     reconciliation: dict[str, Any],
     discovery: dict[str, Any],
     suggested_human_actions: list[str],
+    docker: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     report = {
         "schema_version": REPORT_SCHEMA_VERSION,
@@ -47,6 +48,7 @@ def build_report(
         "contract_questions": contract_questions,
         "stricter_rules_reconciliation": reconciliation,
         "discovery": discovery,
+        "docker": docker,
         "suggested_human_actions": suggested_human_actions,
     }
     guard_tree(report, path="report")
@@ -98,6 +100,16 @@ def render_human(report: dict[str, Any]) -> str:
         f"discovery: framework={discovery['framework']} status={discovery['status']} — "
         f"{discovery['detail']}"
     )
+    docker = report.get("docker")
+    if docker is not None:
+        lines.append("")
+        lines.append(
+            f"docker: cli_present={docker['cli_present']} "
+            f"daemon_healthy={docker['daemon_healthy']} "
+            f"server_version={docker['server_version']}"
+        )
+        if docker.get("error_detail"):
+            lines.append(f"  detail: {docker['error_detail']}")
     if report["suggested_human_actions"]:
         lines.append("")
         lines.append("suggested external/operational actions (HUMAN decision only):")
