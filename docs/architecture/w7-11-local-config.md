@@ -63,3 +63,66 @@ resources from the wheel. Dependencies/shared packages remain the existing test
 environment/source; this is NOT a clean-machine installation or deployment test.
 No persistent server/network provider/account/token issuance. Full regression
 6391 remains same unchanged code; this addendum records artifact verification.
+
+## Operator handoff checklist (accepted v1 path only)
+
+This is a local technical-diagnostic pilot, not live AEO measurement or a
+self-service SaaS login. Do not select the unintegrated SQLite version2 unit.
+
+1. Obtain explicit authorization for the exact supplied HTML pages. Use synthetic
+   data for demos; do not fetch sites or copy customer accounts automatically.
+2. Create a canonical, non-symlink input directory outside the Git checkout.
+   Write the existing CLI manifest with explicit tenant, expected cohort, relative
+   HTML files and SHA256 of exact supplied bytes. Missing pages stay unmeasured.
+3. Set SAENA_PILOT_HOME to a separate private directory outside both input and
+   every Git repository. Run the existing html_audit_cli with mandatory real
+   skill-bundle validation from the accepted integration checkout.
+4. Inspect report.json, report.txt and receipt.json. The operator must confirm
+   page/tenant provenance, not merely accept a filename or hash as truth.
+5. Build the existing version1 operator config: pinned PUBLIC key only,
+   issuer/audience, server membership, explicit read grants, report_root and
+   opaque report IDs with exact report/receipt byte hashes. For report-only
+   users, roles can be empty; readers grants do not require proposer powers.
+   Never put a token, account password or private signing key into config.
+6. Run local_config --check. Refusal means stop and inspect the source locally;
+   never disable validation to load the report. Check does not fetch/observe.
+7. Only an authorized operator may start the existing ASGI factory. Bind to
+   loopback for a local demonstration; do not expose it externally. Startup
+   does not create an IdP, login, refresh, token issuance or TLS deployment.
+8. Open /report-viewer, use only an authorized temporary access token, and enter
+   the approved opaque report ID. Token is cleared on each request. A normal
+   viewer session cannot discover report IDs or manage accounts.
+9. Confirm missing pages and unknown robots/header/CDN/index/render status are
+   visible. Title/canonical/JSON-LD syntax findings are not citation outcomes.
+10. End the temporary local process/session. Record validated inputs, artifact
+    hashes, known limitations and actual operator acceptance separately.
+    There is no built-in retention/deletion workflow or production backup yet.
+
+Troubleshooting without bypass:
+- configuration invalid: exact version1 keys, tenant env, public-key format,
+  trusted canonical file permissions and registered artifact hashes.
+- 401: temporary token signature/issuer/audience/time/server membership, not
+  role headers; never log or paste the token into an error report.
+- 403: explicit server reader grant missing; do not grant wider proposer roles.
+- 404: wrong/unknown report ID or another tenant; do not reveal its existence.
+- 503: unsafe/corrupt/mismatched report; preserve it and investigate, not reset.
+- unmeasured: no supplied page bytes, not a performance score of zero.
+
+## Actual accepted-path synthetic pilot demonstration
+
+Executed from accepted02c47ab, not SQLite worktree, with real CLI bundle validation
+and two explicitly synthetic HTML snapshots for example.invalid/product:
+before: canonical_not_observed, jsonld_invalid, meta_noindex, title_not_observed.
+after: canonical_present, jsonld_syntax_valid, title_present.
+Both reports retained expected2/measured1 and the same unmeasured missing page.
+This demonstrates local diagnostic response to supplied markup changes, NOT
+search-engine eligibility, actual indexing, citations, traffic or revenue lift.
+
+Actual CLI created two fresh reports/receipts without changing input bytes.
+Version1 --check accepted two report bindings and returned
+live_observation_verified=false. In-process TestClient returned401 without token,
+200 with in-memory synthetic signed token for both reports, and200 for viewer
+shell/asset. No network server, real IdP, customer material or token/private-key
+file was created. Public fixture key and output reports remain local QA inputs.
+The browser interaction suite remains the earlier20 actual-Chromium scenarios;
+this demonstration did not repeat that browser suite or claim it did.
