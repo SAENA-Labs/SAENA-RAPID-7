@@ -42,6 +42,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import quote
 
 from saena_chatgpt_observer.errors import BrowserSessionRenderError, ChatgptObserverError
 from saena_chatgpt_observer.pool import BrowserSessionPort
@@ -88,6 +89,7 @@ class _PlaywrightBrowserSession:
     _page: _PlaywrightPage
     session_id: str
     _closed: bool = False
+    _context: Any = None
 
     def render_search_result(self, *, query_text: str) -> bytes:
         if self._closed:
@@ -96,9 +98,17 @@ class _PlaywrightBrowserSession:
                 context={"session_id": self.session_id},
             )
         try:
-            url = CHATGPT_SEARCH_URL_TEMPLATE.format(query=query_text)
-            self._page.goto(url, wait_until="networkidle")
+            url = CHATGPT_SEARCH_URL_TEMPLATE.format(query=quote(query_text, safe=""))
+            response = self._page.goto(url, wait_until="networkidle")
+            if response is None or not response.ok:
+                status = None if response is None else response.status
+                raise BrowserSessionRenderError(
+                    "search navigation did not return a successful HTTP response",
+                    context={"session_id": self.session_id, "http_status": status},
+                )
             content = self._page.content()
+        except BrowserSessionRenderError:
+            raise
         except Exception as exc:  # noqa: BLE001 — adapter boundary: any
             # Playwright failure (navigation timeout, target crashed, ...)
             # maps to this package's own typed, retryable capture error —
@@ -121,6 +131,13 @@ class _PlaywrightBrowserSession:
         if self._closed:
             return
         self._closed = True
+        if self._context is not None:
+            try:
+                # Closing a page alone leaves its isolated context allocated.
+                self._context.close()
+                return
+            except Exception:
+                pass  # Still attempt page cleanup when context teardown fails.
         with contextlib.suppress(Exception):  # best-effort teardown
             self._page.close()
 
@@ -155,11 +172,17 @@ class PlaywrightBrowserSessionFactory:
 
     def __call__(self) -> BrowserSessionPort:
         context = self._browser.new_context()
-        page = context.new_page()
+        try:
+            page = context.new_page()
+        except Exception:
+            with contextlib.suppress(Exception):
+                context.close()
+            raise
         session = _PlaywrightBrowserSession(
             _browser=self._browser,
             _page=page,
             session_id=f"playwright-session-{self._next_id}",
+            _context=context,
         )
         self._next_id += 1
         return session
