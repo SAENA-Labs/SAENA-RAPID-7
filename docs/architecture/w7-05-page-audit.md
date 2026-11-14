@@ -44,3 +44,10 @@ Primary rationale:
 https://developers.google.com/search/docs/fundamentals/ai-optimization-guide
 https://developers.google.com/search/docs/appearance/ai-features
 https://help.openai.com/en/articles/12627856-publishers-and-developers-faq
+
+Final combined verification, all five units including critic fixes: **6185
+passed, 45 skipped, 453 integration deselected, 2 warnings in 112.10 seconds**.
+The original 6070-test baseline now has 115 added regression cases. Temporary
+clone only; no original branch merge, remote push or deployment. Existing
+Python environment reused, single nice-10 process, no paid observation calls.
+Skipped tags/tooling and excluded real integration limitations remain unchanged.
