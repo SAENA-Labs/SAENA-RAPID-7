@@ -562,11 +562,7 @@ def _run_b_gate(inputs: MeasurementInputs, policies: MeasurementPolicies, state:
             kind=evidence_mod.EvidenceKind.B_GATE_DECISION,
             ref=_evidence_ref(
                 "b-gate://decision",
-                {
-                    "verdict": decision.verdict.value,
-                    "reason_codes": [c.value for c in decision.reason_codes],
-                    "qualifying_layers": [layer.value for layer in decision.qualifying_layers],
-                },
+                decision.model_dump(mode="json"),
             ),
         )
     )
