@@ -76,3 +76,10 @@ so type annotations alone did not enforce our single exact issuer/audience
 configuration contract. Reject non-string or blank issuer/audience at startup.
 Six regression cases added; console suite 109 passed in 0.77s; independent static
 review PASS. Normal values are not normalized, preserving exact comparison.
+
+Final exact-trust follow-up integrated as ccd8073. Append-only doc conflict was
+resolved retaining both prior integration evidence and new hardening record.
+152 console + approval-flow cases passed in 1.07s. Final non-integration suite:
+6279 passed, 45 skipped, 453 deselected, 2 warnings in 113.90s. Same exclusions
+as above. Memory free observed 74%; no Hanes interference. This is the tested
+code commit; subsequent evidence-only document commit does not change code.
