@@ -165,6 +165,7 @@ def create_app(
     *,
     enable_report_viewer: bool = False,
     report_catalog: Any = None,
+    observation_catalog: Any = None,
     token_verifier: Any = None,
     auth_mode: str = "production",
     run_store: RunStore | None = None,
@@ -220,6 +221,22 @@ def create_app(
                 response.headers.update(HEADERS)
             return response
 
+    if observation_catalog is not None:
+        from saena_forge_console.ui_observation_api import HEADERS as OBSERVATION_HEADERS
+        from saena_forge_console.ui_observation_api import router as observation_router
+        from saena_forge_console.ui_observation_store import ObservationCatalog
+
+        if auth_mode != "production" or not isinstance(observation_catalog, ObservationCatalog):
+            raise ValueError("observation API requires verified auth and catalog")
+        app.state.observation_catalog = observation_catalog
+        app.include_router(observation_router)
+
+        async def observation_headers(request: Request, call_next: Any) -> Response:
+            response = await call_next(request)
+            if request.url.path.startswith("/v1/ui-observations/"):
+                response.headers.update(OBSERVATION_HEADERS)
+            return response
+
     @app.exception_handler(ServiceError)
     async def _service_error_handler(request: Request, exc: ServiceError) -> Response:
         return _problem_response(request, exc)
@@ -270,6 +287,9 @@ def create_app(
     if report_catalog is not None:
         # Include tenant-middleware denials in report cache-safety headers.
         app.middleware("http")(report_response_headers)
+
+    if observation_catalog is not None:
+        app.middleware("http")(observation_headers)
 
     return app
 
