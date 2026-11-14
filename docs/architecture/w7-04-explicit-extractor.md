@@ -60,3 +60,14 @@ rollback and verification report, plus a baseline/measurement plan. Report
 separately (a) local correctness, (b) real deployment, (c) observed visibility,
 (d) attributed business effect. Today only (a) was tested here. No external
 customer access, publication, merge, push or deployment was performed.
+
+## Final combined regression result
+
+All four patches combined in an isolated temporary clone, original repository
+and Hanes untouched: **6129 passed, 45 skipped, 453 integration deselected,
+2 warnings in 125.42 seconds**. Baseline was 6070 passed, so 59 regressions
+were added across four units. Python imports were directed to the combined
+clone; existing environment reused; single nice-10 process. No live outcome
+claim follows from these numbers. The 45 skips include missing historical
+release tags and absent Helm/kubeconform. Original working tree still has only
+its pre-existing untracked devcontainer lock file; all four unit trees clean.
