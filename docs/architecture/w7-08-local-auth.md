@@ -56,3 +56,18 @@ Independent reviewer final PASS: 44 new authentication cases independently
 passed in 0.29s against this worktree; static review and diff check passed.
 Reviewer could not apply nice(15) in its environment; only the short new suite
 ran. Full regression remains deferred, not silently considered complete.
+
+## Post-Hanes integration verification
+
+After Hanes finished its priority model run, parent authorized integration and
+full regression. Applied unit 739f2c1 onto clean integration/rapid7-local-readiness
+27bbb57 as 7d2ccf6 without conflicts. No original checkout or remote changes.
+Integration console + in-process approval-flow suite: 146 passed, 1 warning,
+1.02s. Full non-integration regression on code 7d2ccf6: 6273 passed, 45 skipped,
+453 integration cases deselected, 2 warnings, 115.27s. Skips: 43 missing prior
+contract tags and 2 unavailable Helm/kubeconform tools. This does not validate
+live providers/deployment. Original baseline 6070 -> current 6273 (203 added
+regressions across approved units). Dependency injection source paths explicitly
+selected this checkout and the isolated PyJWT/crypto install, not original code.
+Single nice15 test process, memory free observed 72% before and 71% during run;
+no Hanes model started, no parallel workload added. Ruff/diff checks pass.
