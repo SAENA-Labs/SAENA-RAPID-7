@@ -21,7 +21,7 @@ def test_auditor_gets_200_with_stubbed_downstream_record(
 ) -> None:
     monkeypatch.setenv("SAENA_TENANT_ID", DEFAULT_TENANT)
     lineage_port.seed(DEFAULT_TENANT, _REF, {"ref": _REF, "resolved": True})
-    app = create_app(run_store=run_store, lineage_port=lineage_port)
+    app = create_app(auth_mode="test_headers", run_store=run_store, lineage_port=lineage_port)
     client = TestClient(app)
 
     response = client.get(f"/v1/lineage/{_REF}", headers=actor_headers(roles="auditor"))
@@ -45,7 +45,9 @@ def test_stub_lineage_port_always_404s_when_no_port_injected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SAENA_TENANT_ID", DEFAULT_TENANT)
-    app = create_app()
+    app = create_app(
+        auth_mode="test_headers",
+    )
     client = TestClient(app)
     response = client.get(f"/v1/lineage/{_REF}", headers=actor_headers(roles="auditor"))
     assert response.status_code == 404

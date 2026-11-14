@@ -149,7 +149,7 @@ class TestGenericExceptionHandler:
             def resolve(self, tenant_id: str, ref: str) -> dict[str, object]:
                 raise RuntimeError(sentinel)
 
-        app = create_app(lineage_port=_BoomLineagePort())
+        app = create_app(auth_mode="test_headers", lineage_port=_BoomLineagePort())
         client = TestClient(app, raise_server_exceptions=False)
 
         response = client.get(
@@ -175,7 +175,7 @@ class TestGenericExceptionHandler:
             def resolve(self, tenant_id: str, ref: str) -> dict[str, object]:
                 raise RuntimeError(sentinel)
 
-        app = create_app(lineage_port=_BoomLineagePort())
+        app = create_app(auth_mode="test_headers", lineage_port=_BoomLineagePort())
         client = TestClient(app, raise_server_exceptions=False)
 
         logger = logging.getLogger("saena_forge_console.app")

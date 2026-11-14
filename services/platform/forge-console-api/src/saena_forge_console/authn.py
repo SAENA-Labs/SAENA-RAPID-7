@@ -1,40 +1,9 @@
-"""AuthN stub: header-derived `ActorContext` construction (W1-era identity
-provider stand-in).
+"""Fail-closed production token authentication with explicit legacy test helper.
 
-Real identity provider (OIDC/JWT verification, session issuance) is W3+
-scope (`docs/architecture/implementation-waves.md`) — this module does not
-verify a signature or call an external IdP. What IS real now: the
-*construction and validation* of `saena_domain.identity.ActorContext` from
-request headers, including the human-actor-requires-tenant_id conditional
-(Security MUST-FIX 2 / `ActorTenantRequiredError`, enforced by the domain
-layer, not re-implemented here) and the RBAC role set this service uses for
-`authorize()` (`X-Saena-Roles`, comma-separated `saena_domain.authz.Role`
-values).
-
-Headers consumed:
-    X-Saena-Actor-Id      required, non-empty.
-    X-Saena-Session-Id    required, non-empty.
-    X-Saena-Actor-Type    optional, `human` (default) | `system`.
-    X-Saena-Tenant-Id     required when `X-Saena-Actor-Type: human` (or the
-                          default), forwarded into `ActorContext.tenant_id` —
-                          the same header ADR-0014's tenant-reconciliation
-                          middleware (`saena_forge_console.tenant_reconcile`)
-                          separately checks against `SAENA_TENANT_ID`. A
-                          `system` actor may omit it.
-    X-Saena-Roles         optional, comma-separated role names
-                          (`saena_domain.authz.Role` values); unknown role
-                          tokens are rejected (fail-closed, not silently
-                          dropped) so a typo'd role can never silently
-                          collapse to "no roles" and pass through
-                          default-deny by accident-shaped luck.
-
-Missing/empty `X-Saena-Actor-Id` or `X-Saena-Session-Id` raises `auth`
-category (`saena.auth.actor_id_required` / `saena.auth.session_id_required`)
-— this is the "no anonymous caller" gate; `X-Saena-Roles` absent/empty is
-NOT an auth error, it resolves to an empty role set, which then fails every
-`authorize()` check downstream (default-deny, `saena_domain.authz`) — i.e.
-missing roles is a `policy_denied`-category failure at the RBAC dependency,
-not an `auth`-category failure here.
+build_request_actor dispatches to the app's configured TokenVerifier. Only
+create_app(auth_mode="test_headers") enables the unsigned header fixture path.
+The helper is not an identity provider and must not be exposed to customers.
+Real IdP connection, login/session issuance and rotation are not implemented.
 """
 
 from __future__ import annotations
@@ -90,7 +59,7 @@ def _parse_roles(raw: str | None) -> frozenset[Role]:
     return frozenset(roles)
 
 
-def build_request_actor(request: Request) -> RequestActor:
+def _build_header_actor(request: Request) -> RequestActor:
     """Construct a `RequestActor` from request headers.
 
     Raises `ServiceError` (auth/validation category) on malformed input;
@@ -144,3 +113,13 @@ __all__ = [
     "ServiceError",
     "build_request_actor",
 ]
+
+
+def build_request_actor(request: Request) -> RequestActor:
+    """Fail closed unless an explicit test mode or verified token is configured."""
+    if getattr(request.app.state, "auth_mode", None) == "test_headers":
+        return _build_header_actor(request)
+    verifier = getattr(request.app.state, "token_verifier", None)
+    if verifier is None:
+        raise auth_error("authentication_required", detail="verified authentication required")
+    return verifier.authenticate(request)
