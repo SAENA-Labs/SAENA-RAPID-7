@@ -38,3 +38,9 @@ privacy detector. Tenant assertion is not authentication, and hashes are preserv
 rather than reverified against missing original HTML. Future caller must enforce
 authorization/source provenance. Pilot remains stdlib-only with no new runtime
 service dependency. W7-05 and this adapter are not deployed/wired into an endpoint.
+
+Final six-unit combined verification: **6208 passed, 45 skipped, 453 integration
+deselected, 2 warnings in 112.59 seconds**. Baseline 6070, now 138 added cases.
+Temporary clone only, existing Python environment, single nice-10 process.
+Missing tag/tooling skips and real integration exclusions remain explicitly
+unverified. No merge, push, deployment or Hanes modification.
