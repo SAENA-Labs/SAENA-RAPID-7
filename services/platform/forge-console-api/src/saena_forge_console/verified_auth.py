@@ -51,8 +51,10 @@ class TokenVerifier:
         max_ttl_seconds: int = 3600,
     ) -> None:
         if (
-            not issuer
-            or not audience
+            not isinstance(issuer, str)
+            or not issuer.strip()
+            or not isinstance(audience, str)
+            or not audience.strip()
             or type(max_ttl_seconds) is not int
             or not 1 <= max_ttl_seconds <= 3600
         ):

@@ -56,3 +56,9 @@ Independent reviewer final PASS: 44 new authentication cases independently
 passed in 0.29s against this worktree; static review and diff check passed.
 Reviewer could not apply nice(15) in its environment; only the short new suite
 ran. Full regression remains deferred, not silently considered complete.
+
+Follow-up trust-config hardening: PyJWT accepts issuer/audience collections,
+so type annotations alone did not enforce our single exact issuer/audience
+configuration contract. Reject non-string or blank issuer/audience at startup.
+Six regression cases added; console suite 109 passed in 0.77s; independent static
+review PASS. Normal values are not normalized, preserving exact comparison.
