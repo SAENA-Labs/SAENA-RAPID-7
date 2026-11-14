@@ -30,7 +30,7 @@ Per query, in order:
    Citation parsing/normalization is citation-intelligence-service's own
    bounded context (`docs/architecture/wave4-plan.md` w4-05); this
    capture-only adapter never derives citation refs from raw content
-   itself — a caller with no real extractor yet may pass
+   itself — a synthetic test may explicitly pass
    `lambda raw_content: ()` (zero citations is a valid, meaningful
    signal — same "never rejected" discipline `observation.
    PlatformObservation` already documents for the W3 pipeline).
@@ -67,7 +67,7 @@ from saena_chatgpt_observer.platform_observation_record import (
 from saena_chatgpt_observer.pool import BrowserPool
 
 #: Pure `raw_content -> citation_refs` callable — see module docstring
-#: item 4. Never performs I/O; a caller with no real extractor wired up yet
+#: item 4. Never performs I/O; a synthetic test
 #: may pass a constant-`()` lambda.
 CitationExtractor = Callable[[bytes], tuple[str, ...]]
 
@@ -114,7 +114,7 @@ def run_pooled_observation(
     artifact_gateway: RawArtifactGatewayPort,
     engine_id: str,
     queries: Sequence[str],
-    citation_extractor: CitationExtractor = lambda raw_content: (),  # noqa: ARG005
+    citation_extractor: CitationExtractor | None = None,
     observation_id_factory: Callable[[str, int], str] = _default_observation_id,
     clock: Callable[[], str] = _utc_now_iso,
 ) -> PooledObservationRunResult:
@@ -132,6 +132,8 @@ def run_pooled_observation(
     `pool.py`/`artifact_gateway.py`/`playwright_driver.py` docstrings).
     """
     guard_engine_id(engine_id)
+    if not callable(citation_extractor):
+        raise ValueError("citation_extractor must be explicitly configured before capture")
 
     status = JobStatus.PENDING
     status = transition(status, JobStatus.RUNNING).status

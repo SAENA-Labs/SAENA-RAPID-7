@@ -29,6 +29,7 @@ def _fixed_clock() -> str:
 def test_end_to_end_capture_produces_records_and_envelopes() -> None:
     gw = FakeArtifactGateway()
     result = run_pooled_observation(
+        citation_extractor=lambda raw: (),  # Explicit synthetic zero-citation fixture.
         job_context=make_job_context(),
         pool=_pool(),
         artifact_gateway=gw,
@@ -52,6 +53,7 @@ def test_end_to_end_capture_produces_records_and_envelopes() -> None:
 def test_raw_content_is_stored_only_under_the_job_tenant() -> None:
     gw = FakeArtifactGateway()
     run_pooled_observation(
+        citation_extractor=lambda raw: (),  # Explicit synthetic zero-citation fixture.
         job_context=make_job_context(tenant_id=TENANT_A),
         pool=_pool(),
         artifact_gateway=gw,
@@ -67,6 +69,7 @@ def test_raw_content_is_stored_only_under_the_job_tenant() -> None:
 def test_capture_is_deterministic_with_injected_clock_and_ids() -> None:
     def run():
         return run_pooled_observation(
+            citation_extractor=lambda raw: (),  # Explicit synthetic zero-citation fixture.
             job_context=make_job_context(),
             pool=_pool(),
             artifact_gateway=FakeArtifactGateway(),
@@ -85,6 +88,7 @@ def test_disallowed_engine_is_rejected_before_any_capture() -> None:
     gw = FakeArtifactGateway()
     with pytest.raises(EngineNotPermittedError):
         run_pooled_observation(
+            citation_extractor=lambda raw: (),  # Explicit synthetic zero-citation fixture.
             job_context=make_job_context(),
             pool=_pool(),
             artifact_gateway=gw,
@@ -99,6 +103,7 @@ def test_render_failure_fails_closed_and_stores_nothing() -> None:
     gw = FakeArtifactGateway()
     with pytest.raises(ObservationRetryExhaustedError):
         run_pooled_observation(
+            citation_extractor=lambda raw: (),  # Explicit synthetic zero-citation fixture.
             job_context=make_job_context(),
             pool=_pool(),
             artifact_gateway=gw,
@@ -120,3 +125,48 @@ def test_citation_extractor_refs_land_on_the_record() -> None:
         clock=_fixed_clock,
     )
     assert result.results[0].observation_record["citation_refs"] == ["https://example.com/cited"]
+
+
+@pytest.mark.parametrize("extractor", ["omitted", None, 42])
+def test_unconfigured_extraction_refuses_before_browser_or_storage(extractor):
+    gw = FakeArtifactGateway()
+    pool = _pool()
+    kwargs = {} if extractor == "omitted" else {"citation_extractor": extractor}
+    with pytest.raises(ValueError, match="citation_extractor"):
+        run_pooled_observation(
+            job_context=make_job_context(),
+            pool=pool,
+            artifact_gateway=gw,
+            engine_id=ENGINE,
+            queries=["crm software"],
+            **kwargs,
+        )
+    assert pool.stats().total == 0
+    assert gw.put_calls == []
+
+
+def test_explicit_empty_extraction_remains_valid_zero_citations():
+    result = run_pooled_observation(
+        job_context=make_job_context(),
+        pool=_pool(),
+        artifact_gateway=FakeArtifactGateway(),
+        engine_id=ENGINE,
+        queries=["crm software"],
+        citation_extractor=lambda raw: (),
+    )
+    assert result.results[0].observation_record["citation_refs"] == []
+
+
+def test_extractor_exception_is_not_converted_to_success_or_zero_citations():
+    def unavailable_parser(raw):
+        raise RuntimeError("parser unavailable")
+
+    with pytest.raises(RuntimeError, match="parser unavailable"):
+        run_pooled_observation(
+            job_context=make_job_context(),
+            pool=_pool(),
+            artifact_gateway=FakeArtifactGateway(),
+            engine_id=ENGINE,
+            queries=["crm software"],
+            citation_extractor=unavailable_parser,
+        )
