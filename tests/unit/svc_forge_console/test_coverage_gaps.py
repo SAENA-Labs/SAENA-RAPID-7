@@ -101,6 +101,7 @@ class TestBuildRequestActorInvalidValueError:
         # ActorTenantRequiredError), exercising the second except clause in
         # build_request_actor.
         fake_request = SimpleNamespace(
+            app=SimpleNamespace(state=SimpleNamespace(auth_mode="test_headers")),
             headers={
                 "X-Saena-Actor-Id": "a" * 200,
                 "X-Saena-Session-Id": "session-0001",
@@ -121,6 +122,7 @@ class TestEmptyTenantHeaderTreatedAsAbsent:
         # `svc_forge_console.conftest.actor_headers`'s module for the
         # ordering this unit test sidesteps).
         fake_request = SimpleNamespace(
+            app=SimpleNamespace(state=SimpleNamespace(auth_mode="test_headers")),
             headers={
                 "X-Saena-Actor-Id": "actor-0001",
                 "X-Saena-Session-Id": "session-0001",

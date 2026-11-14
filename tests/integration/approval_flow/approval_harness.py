@@ -457,7 +457,9 @@ def build_harness(
 
     run_store = RunStore()
     lineage_port = InMemoryLineagePort()
-    forge_console_app = create_forge_console_app(run_store=run_store, lineage_port=lineage_port)
+    forge_console_app = create_forge_console_app(
+        auth_mode="test_headers", run_store=run_store, lineage_port=lineage_port
+    )
     forge_console_client = TestClient(forge_console_app)
 
     return ApprovalFlowHarness(
@@ -514,7 +516,9 @@ def build_fail_closed_harness(*, tenant_id: str) -> ApprovalFlowHarness:
 
     run_store = RunStore()
     lineage_port = InMemoryLineagePort()
-    forge_console_app = create_forge_console_app(run_store=run_store, lineage_port=lineage_port)
+    forge_console_app = create_forge_console_app(
+        auth_mode="test_headers", run_store=run_store, lineage_port=lineage_port
+    )
     forge_console_client = TestClient(forge_console_app)
 
     return ApprovalFlowHarness(

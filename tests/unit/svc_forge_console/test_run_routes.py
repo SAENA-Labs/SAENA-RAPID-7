@@ -116,7 +116,7 @@ class TestCrossTenantIsolation:
         ownership check, never the reconciliation middleware's 403.
         """
         lineage_port = InMemoryLineagePort()
-        app = create_app(run_store=run_store, lineage_port=lineage_port)
+        app = create_app(auth_mode="test_headers", run_store=run_store, lineage_port=lineage_port)
         client = TestClient(app)
 
         monkeypatch.setenv("SAENA_TENANT_ID", DEFAULT_TENANT)

@@ -68,3 +68,17 @@ patch unit:
 - Consumed events (`plan.contract.*`, `quality.gate.*`, handoff-ready
   signals) — no event consumer is wired in this patch unit.
 - Dockerfile / k3s deployment manifests.
+
+## W7-08 local authentication boundary
+
+The default create_app() now refuses startup without a configured TokenVerifier.
+Use TokenVerifier with a pinned RSA public key, exact issuer/audience and a
+server-managed subject membership mapping. Synthetic fixtures alone may use
+create_app(auth_mode="test_headers"). Prior W2A header-stub descriptions above
+are historical test behavior, NOT production authentication.
+
+This is not a completed IdP or public SaaS: login/session issuance, key rotation,
+revocation, persistent membership, downstream service auth and deployment remain
+separate work. No signing key is accepted by this verifier. Configure trusted
+keys/membership in server startup code, never from request parameters.
+See docs/architecture/w7-08-local-auth.md for bounds and validation.

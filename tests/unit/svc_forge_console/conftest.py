@@ -76,7 +76,7 @@ def client(
     (or the env var) explicitly per test.
     """
     monkeypatch.setenv("SAENA_TENANT_ID", DEFAULT_TENANT)
-    app = create_app(run_store=run_store, lineage_port=lineage_port)
+    app = create_app(auth_mode="test_headers", run_store=run_store, lineage_port=lineage_port)
     return TestClient(app)
 
 

@@ -163,6 +163,8 @@ class _TenantReconcileMiddleware(BaseHTTPMiddleware):
 
 def create_app(
     *,
+    token_verifier: Any = None,
+    auth_mode: str = "production",
     run_store: RunStore | None = None,
     lineage_port: LineagePort | None = None,
 ) -> FastAPI:
@@ -177,7 +179,17 @@ def create_app(
     audit-ledger `LineagePort` client without touching this factory's
     signature shape (only the default values change).
     """
+    from saena_forge_console.verified_auth import TokenVerifier
+
+    if auth_mode not in {"production", "test_headers"}:
+        raise ValueError("unsupported auth mode")
+    if auth_mode == "production" and not isinstance(token_verifier, TokenVerifier):
+        raise ValueError("production requires a configured TokenVerifier")
+    if auth_mode == "test_headers" and token_verifier is not None:
+        raise ValueError("test headers cannot be combined with token verification")
     app = FastAPI(title="forge-console-api", version="0.1.0")
+    app.state.auth_mode = auth_mode
+    app.state.token_verifier = token_verifier
     app.state.run_store = run_store if run_store is not None else RunStore()
     app.state.lineage_port = lineage_port if lineage_port is not None else StubLineagePort()
 
