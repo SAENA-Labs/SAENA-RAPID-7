@@ -405,14 +405,9 @@ def _run_did(inputs: MeasurementInputs, policies: MeasurementPolicies, state: _R
             kind=evidence_mod.EvidenceKind.DID_INPUTS,
             ref=_evidence_ref(
                 "did://inputs",
-                [
-                    {
-                        "layer": s.layer,
-                        "metric_id": s.metric_id,
-                        "evidence_basis_id": s.evidence_basis_id,
-                    }
-                    for s in inputs.signals
-                ],
+                # Bind the numeric repeats, timestamps and observation IDs,
+                # not only labels: equal means can hide altered input evidence.
+                [s.model_dump(mode="json") for s in inputs.signals],
             ),
         )
     )
@@ -508,12 +503,24 @@ def _run_b_gate(inputs: MeasurementInputs, policies: MeasurementPolicies, state:
     did_result = state.did_result
     signal_results: list[b_gate_mod.SignalResult] = []
     adapter_drift = False
+    evidence_bases = (
+        {basis for basis, _ in inputs.baseline_evidence},
+        {basis for basis, _ in inputs.treatment_evidence},
+        {basis for basis, _ in inputs.control_evidence},
+    )
     if did_result is not None:
         for signal in did_result.signals:
             mapped = _signal_result(signal)
             if mapped is None:
                 adapter_drift = True
                 continue
+            mapped = mapped.model_copy(
+                update={
+                    "has_raw_evidence_ref": all(
+                        signal.evidence_basis_id in bases for bases in evidence_bases
+                    )
+                }
+            )
             signal_results.append(mapped)
 
     manifest_hash_ok = True  # verified post-seal in step 6; see assembly note
@@ -766,6 +773,11 @@ def run_measurement(
         )
 
     status = _final_status(state)
+    if status is OutcomeStatus.PASS and not is_complete:
+        # A numerically positive verdict is not a reportable success without
+        # every required evidence kind. Preserve the incomplete bundle.
+        status = OutcomeStatus.UNDETERMINED
+        state.reason_codes.add(ReasonCode.MISSING_RAW_EVIDENCE_REF)
     decision = state.b_gate_decision
     grs_decision = state.grs_decision
 
@@ -788,7 +800,13 @@ def run_measurement(
         evidence_bundle_complete=is_complete,
         policy_version=policies.gate_policy.version,
         policy_hash=policies.gate_policy.hash,
-        is_production=bool(decision.is_production) if decision is not None else False,
+        is_production=bool(
+            decision is not None
+            and decision.is_production
+            and grs_decision is not None
+            and grs_decision.is_production_valid
+            and policies.did_policy.provenance == "production"
+        ),
         computed_at=_deterministic_computed_at(inputs),
     )
 
