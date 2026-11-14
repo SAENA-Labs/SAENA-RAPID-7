@@ -52,3 +52,14 @@ Final full non-integration regression: 6391 passed, 45 skipped, 453 deselected,
 2 existing warnings in125.28s. Prior skips unchanged:43 missing contract release
 tags,2 missing Helm/kubeconform. No excluded integration/provider claims.
 One low-priority process, observed memory free67-68%; Hanes untouched.
+
+## Final wheel smoke
+Built final saena-forge-console wheel with uv build --offline (no dependency
+installation). Explicit wheel-first PYTHONPATH, console source excluded; asserted
+local_config.__file__ resolves inside the wheel before execution. Auth, report
+API, viewer and local-config suites:162 passed,2 warnings,1.30s. This includes
+actual --check subprocess and named static asset serving through importlib
+resources from the wheel. Dependencies/shared packages remain the existing test
+environment/source; this is NOT a clean-machine installation or deployment test.
+No persistent server/network provider/account/token issuance. Full regression
+6391 remains same unchanged code; this addendum records artifact verification.
