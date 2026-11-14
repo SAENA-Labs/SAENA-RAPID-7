@@ -163,6 +163,7 @@ class _TenantReconcileMiddleware(BaseHTTPMiddleware):
 
 def create_app(
     *,
+    report_catalog: Any = None,
     token_verifier: Any = None,
     auth_mode: str = "production",
     run_store: RunStore | None = None,
@@ -194,6 +195,21 @@ def create_app(
     app.state.lineage_port = lineage_port if lineage_port is not None else StubLineagePort()
 
     app.include_router(router)
+    if report_catalog is not None:
+        from saena_forge_console.report_api import HEADERS
+        from saena_forge_console.report_api import router as report_router
+        from saena_forge_console.report_store import ReportCatalog
+
+        if auth_mode != "production" or not isinstance(report_catalog, ReportCatalog):
+            raise ValueError("report API requires production auth and a ReportCatalog")
+        app.state.report_catalog = report_catalog
+        app.include_router(report_router)
+
+        async def report_response_headers(request: Request, call_next: Any) -> Response:
+            response = await call_next(request)
+            if request.url.path.startswith("/v1/html-audit-reports/"):
+                response.headers.update(HEADERS)
+            return response
 
     @app.exception_handler(ServiceError)
     async def _service_error_handler(request: Request, exc: ServiceError) -> Response:
@@ -242,6 +258,9 @@ def create_app(
     app.add_middleware(_TenantReconcileMiddleware)
     app.add_middleware(_TelemetryContextMiddleware)
     app.add_middleware(_TraceMiddleware)
+    if report_catalog is not None:
+        # Include tenant-middleware denials in report cache-safety headers.
+        app.middleware("http")(report_response_headers)
 
     return app
 
