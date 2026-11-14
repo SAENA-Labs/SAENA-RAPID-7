@@ -8,6 +8,7 @@ import pytest
 from boundary_factories import (
     TENANT_A,
     FakeManifestLookup,
+    make_did_result,
     make_evidence_manifest,
     make_grs_policy,
     make_passing_b_gate_decision,
@@ -15,7 +16,6 @@ from boundary_factories import (
     make_window,
 )
 from saena_domain.measurement.b_gate import BGateDecision, BVerdict, PolicyProvenance
-from saena_domain.measurement.did import DiDPolicy, SignalSeries, compute_did
 from saena_experiment_attribution.boundary.errors import (
     EngineNotPermittedError,
     PayloadValidationError,
@@ -25,27 +25,7 @@ from saena_experiment_attribution.boundary.outcome_publisher import OutcomePubli
 
 
 def _did_result_for(decision: BGateDecision):
-    """A minimal DiDResult whose signals line up with the decision's
-    qualifying layers (evidence_basis_id/layer values only need to be
-    *some* signal series for payload-assembly purposes)."""
-    policy = DiDPolicy(min_repeats=1, effect_threshold=0.0, provenance="test_fixture")
-    series = tuple(
-        SignalSeries(
-            layer=layer.value,
-            metric_id=f"metric-{i}",
-            evidence_basis_id=f"sha256:{i:064d}",
-        )
-        for i, layer in enumerate(
-            decision.qualifying_layers or decision.control_adjusted_view or ["citation"]
-        )
-    )
-    if not series:
-        series = (
-            SignalSeries(
-                layer="citation", metric_id="metric-0", evidence_basis_id="sha256:" + "0" * 64
-            ),
-        )
-    return compute_did(series, policy)
+    return make_did_result(decision)
 
 
 def _publisher_with_verified_manifest(*, tenant_id: str = TENANT_A):
