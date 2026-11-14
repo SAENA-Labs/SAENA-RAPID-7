@@ -66,3 +66,61 @@ unchanged. No external API/event schema was edited.
 Final independent non-author review: PASS; reviewer reran all 60 boundary
 unit tests in 0.13 seconds and diff whitespace checks. No further blocking
 finding. Combined W7-02/W7-03 integration verification follows separately.
+
+## Combined offline verification (2026-11-14)
+
+Temporary clone at baseline 61e555e plus W7-01 (7f0c596), W7-02
+(ceb9b84 + 0dd634c), W7-03 (d225cdf). No original branch merge, push,
+deployment or Hanes service interaction. Python import paths were checked
+to point at the combined clone. Reused existing Python environment; no install.
+
+`pytest -p no:cacheprovider -q -m "not integration"`: **6124 passed,
+45 skipped, 453 deselected, 2 warnings in 117.16 seconds**. Single process,
+`nice -n 10`, no network observations. Skips include unavailable release
+tags and Helm/kubeconform. This is NOT a live-system or customer-effect test.
+
+The synthetic handoff below also passed all five assertions: full pipeline
+to report payload, idempotent replay, missing-provenance refusal, incomplete
+seven-day window refusal, and measurement substitution refusal. Set PYTHONPATH
+to the combined checkout src directories and the two fixture directories
+`tests/unit/svc_experiment_attribution_pipeline` and
+`tests/unit/svc_experiment_attribution_boundary` before running. It uses
+existing test doubles including an always-trust verifier; no actual customer
+authorization, timestamp waiting, or empirical improvement is implied.
+
+```python
+from datetime import timedelta
+from dataclasses import replace
+from pipeline_factories import make_happy_path_inputs, make_ports, make_policies
+from boundary_factories import FakeManifestLookup
+from saena_experiment_attribution.pipeline import run_measurement
+from saena_domain.measurement.did import compute_did
+from saena_domain.measurement.evidence import EvidenceBundleManifest
+from saena_experiment_attribution.boundary.outcome_publisher import OutcomePublisher
+from saena_experiment_attribution.boundary.errors import PublishRefusedError
+from saena_schemas.event.experiment_outcome_observed_v1 import Window, GrsPolicy
+inputs, reg = make_happy_path_inputs()
+ports, policies = make_ports(), make_policies(reg)
+outcome = run_measurement(inputs, ports, policies)
+manifest = EvidenceBundleManifest.model_validate(dict(ports.evidence_store.get(inputs.tenant_id, outcome.evidence_bundle_ref).manifest))
+lookup = FakeManifestLookup(); lookup.put(inputs.tenant_id, manifest)
+end = inputs.server_received_at + timedelta(days=7)
+did = compute_did(inputs.signals, policies.did_policy, window_start=None, window_end=end)
+kwargs = dict(tenant_id=inputs.tenant_id,engine_id='chatgpt-search',experiment_id=inputs.experiment_id,registration_canonical_hash='sha256:'+'a'*64,deployment_confirmation_ref='offline-fixture-only',window=Window(started_at=inputs.server_received_at.isoformat().replace('+00:00','Z'),ended_at=end.isoformat().replace('+00:00','Z'),clock_anchor='deployment_confirmed'),did_result=did,decision=outcome.b_gate_decision,manifest_hash=manifest.manifest_hash,artifact_ref='https://example.com/fixture-only',grs_policy=GrsPolicy(version=outcome.grs_decision.policy_version,hash='sha256:'+outcome.grs_decision.bundle_hash,provenance='test_fixture'))
+payload = OutcomePublisher(manifest_lookup=lookup).publish(**kwargs)
+assert payload['b_verdict']=='pass' and not outcome.is_production
+print('PASS: complete synthetic pipeline -> sealed evidence -> report payload; NOT production efficacy')
+assert run_measurement(inputs, ports, policies).canonical_payload()==outcome.canonical_payload()
+print('PASS: exact replay deterministic/idempotent')
+missing = run_measurement(replace(inputs, baseline_evidence=()), make_ports(), policies)
+assert missing.status.value=='undetermined'
+print('PASS: missing baseline provenance cannot become success')
+early = run_measurement(replace(inputs,evaluation_at=inputs.server_received_at+timedelta(hours=1)),make_ports(),policies)
+assert early.status.value=='undetermined'
+print('PASS: incomplete seven-day clock cannot become success')
+changed = did.model_copy(update={'signals':()})
+try: OutcomePublisher(manifest_lookup=lookup).publish(**{**kwargs,'did_result':changed})
+except PublishRefusedError: print('PASS: substituted measurement blocked at report boundary')
+else: raise AssertionError('tampered measurement accepted')
+
+```
