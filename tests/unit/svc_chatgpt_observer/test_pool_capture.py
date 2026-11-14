@@ -170,3 +170,33 @@ def test_extractor_exception_is_not_converted_to_success_or_zero_citations():
             queries=["crm software"],
             citation_extractor=unavailable_parser,
         )
+
+
+@pytest.mark.parametrize(
+    "invalid_result", ["", b"", {}, set(), iter(()), None, (None,), ("",), ("   ",)]
+)
+def test_malformed_extraction_is_not_valid_zero_or_citation(invalid_result):
+    with pytest.raises(ValueError, match="citation_extractor result"):
+        run_pooled_observation(
+            job_context=make_job_context(),
+            pool=_pool(),
+            artifact_gateway=FakeArtifactGateway(),
+            engine_id=ENGINE,
+            queries=["crm software"],
+            citation_extractor=lambda raw: invalid_result,
+        )
+
+
+@pytest.mark.parametrize(
+    "valid_result", [[], (), ["https://example.com/cited"], ("https://example.com/cited",)]
+)
+def test_explicit_extraction_sequences_preserve_measurement(valid_result):
+    result = run_pooled_observation(
+        job_context=make_job_context(),
+        pool=_pool(),
+        artifact_gateway=FakeArtifactGateway(),
+        engine_id=ENGINE,
+        queries=["crm software"],
+        citation_extractor=lambda raw: valid_result,
+    )
+    assert result.results[0].observation_record["citation_refs"] == list(valid_result)
