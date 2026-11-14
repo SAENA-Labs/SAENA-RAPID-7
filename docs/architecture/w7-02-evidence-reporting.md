@@ -63,3 +63,14 @@ boundary is a separate patch unit; this unit fixes pipeline assembly only.
 No remote push/merge/deploy. Original checkout remains unchanged. Rollback:
 discard/revert this unit's local commit; original full baseline was independently
 verified before modification (6,070 passed, same exclusions).
+
+## W7-03 integration follow-up
+
+The downstream publisher now verifies the actual DiD output and complete
+BGateDecision hashes. This generator therefore hashes the whole decision JSON,
+not only verdict/reasons/qualifying layers, binding confidence and raw/control
+views as well. W7-02 and W7-03 must be reviewed/integrated together. Legacy
+subset-hashed bundles are not silently upgraded: new publication rejects
+mismatches. Preserve old records; a new authorized evaluation/run is needed,
+not an in-place overwrite under an old idempotency key. No existing stored
+records were modified during this task.
