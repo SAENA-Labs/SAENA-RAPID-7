@@ -206,6 +206,7 @@ def test_pooled_observation_rejects_engine_before_acquiring_any_browser_session(
 
     with pytest.raises((ExecutionEngineError, EngineDisallowedError)):
         run_pooled_observation(
+            citation_extractor=lambda raw: (),  # Explicit synthetic zero-citation fixture.
             job_context=job_context,
             pool=pool,
             artifact_gateway=artifact_gateway,
@@ -228,6 +229,7 @@ def test_pooled_observation_succeeds_end_to_end_for_the_one_permitted_engine_id(
     artifact_gateway = FakeArtifactGateway()
 
     result = run_pooled_observation(
+        citation_extractor=lambda raw: (),  # Explicit synthetic zero-citation fixture.
         job_context=job_context,
         pool=pool,
         artifact_gateway=artifact_gateway,
@@ -256,6 +258,7 @@ def test_pooled_observation_wraps_render_failure_without_bypassing_engine_guard(
 
     with pytest.raises(ObservationRetryExhaustedError):
         run_pooled_observation(
+            citation_extractor=lambda raw: (),  # Explicit synthetic zero-citation fixture.
             job_context=job_context,
             pool=pool,
             artifact_gateway=artifact_gateway,

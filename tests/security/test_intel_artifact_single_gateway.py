@@ -63,6 +63,7 @@ def _run_pooled_capture(query_text: str = "what is saena"):
     pool = BrowserPool(factory, max_size=1)
     artifact_gateway = FakeArtifactGateway()
     result = run_pooled_observation(
+        citation_extractor=lambda raw: (),  # Explicit synthetic zero-citation fixture.
         job_context=_make_job_context(),
         pool=pool,
         artifact_gateway=artifact_gateway,
