@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SAENA · HTML 진단 보고서</title><link rel="stylesheet" href="/report-viewer-assets/viewer.css"><script src="/report-viewer-assets/viewer.js" defer></script></head>
+<body><main>
+<header><span class="brand">SAENA / RAPID 7</span><h1>HTML 진단 보고서</h1><p class="intro">근거를 확인하고, 아직 모르는 것을 구분합니다.</p></header>
+<aside class="notice" aria-label="측정 범위">제공된 HTML만 진단합니다. 실제 검색 노출·인용·매출 성과 측정이 아닙니다.</aside>
+<section class="access" aria-labelledby="access-title"><h2 id="access-title">승인된 보고서 열기</h2><p>실제 로그인 서비스가 아닌 임시 액세스 토큰을 사용하는 로컬 읽기 화면입니다. 계정 비밀번호를 입력하지 마세요.</p>
+<label for="report-id">보고서 ID</label><input id="report-id" autocomplete="off" spellcheck="false" maxlength="128" placeholder="승인된 보고서 ID">
+<label for="access-token">임시 액세스 토큰</label><input id="access-token" type="password" autocomplete="off" spellcheck="false" maxlength="16384" placeholder="토큰은 이 페이지에서만 사용됩니다">
+<div class="actions"><button id="load" type="button">보고서 조회</button><button id="clear" type="button" class="secondary">초기화 / 지우기</button></div>
+<p class="privacy">토큰과 보고서를 저장하지 않습니다. 화면 이탈·새로고침 시 지워집니다.</p></section>
+<p id="status" role="status" aria-live="polite">보고서 ID와 임시 토큰을 입력해 주세요.</p>
+<section id="report" aria-label="진단 결과" hidden></section>
+<footer>문제가 발견되지 않았다는 사실이 검색 적격성이나 성과를 보장하지 않습니다.</footer>
+</main></body></html>

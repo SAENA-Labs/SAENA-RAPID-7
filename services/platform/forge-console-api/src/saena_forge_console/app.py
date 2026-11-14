@@ -163,6 +163,7 @@ class _TenantReconcileMiddleware(BaseHTTPMiddleware):
 
 def create_app(
     *,
+    enable_report_viewer: bool = False,
     report_catalog: Any = None,
     token_verifier: Any = None,
     auth_mode: str = "production",
@@ -194,6 +195,14 @@ def create_app(
     app.state.run_store = run_store if run_store is not None else RunStore()
     app.state.lineage_port = lineage_port if lineage_port is not None else StubLineagePort()
 
+    if type(enable_report_viewer) is not bool:
+        raise ValueError("viewer enable flag must be boolean")
+    if enable_report_viewer and (auth_mode != "production" or report_catalog is None):
+        raise ValueError("viewer requires verified authentication and report catalog")
+    if enable_report_viewer:
+        from saena_forge_console.report_viewer import router as viewer_router
+
+        app.include_router(viewer_router)
     app.include_router(router)
     if report_catalog is not None:
         from saena_forge_console.report_api import HEADERS
