@@ -69,7 +69,7 @@ from saena_chatgpt_observer.pool import BrowserPool
 #: Pure `raw_content -> citation_refs` callable — see module docstring
 #: item 4. Never performs I/O; a synthetic test
 #: may pass a constant-`()` lambda.
-CitationExtractor = Callable[[bytes], tuple[str, ...]]
+CitationExtractor = Callable[[bytes], tuple[str, ...] | list[str]]
 
 
 def _utc_now_iso() -> str:
@@ -155,7 +155,14 @@ def run_pooled_observation(
             artifact_ref = artifact_gateway.put_raw_artifact(
                 tenant_id=job_context.tenant_id, raw_content=raw_content
             )
-            citation_refs = citation_extractor(raw_content)
+            extracted_refs = citation_extractor(raw_content)
+            # Do not coerce malformed empty iterables into valid zero citations.
+            # Explicit lists/tuples may be empty; other result shapes are unknown.
+            if not isinstance(extracted_refs, (tuple, list)) or any(
+                not isinstance(ref, str) or not ref.strip() for ref in extracted_refs
+            ):
+                raise ValueError("citation_extractor result must be a list/tuple of citation refs")
+            citation_refs = tuple(extracted_refs)
             observation_id = observation_id_factory(job_context.run_id, index)
             captured_at = clock()
 

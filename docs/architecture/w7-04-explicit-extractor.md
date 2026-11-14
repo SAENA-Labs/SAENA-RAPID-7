@@ -71,3 +71,27 @@ clone; existing environment reused; single nice-10 process. No live outcome
 claim follows from these numbers. The 45 skips include missing historical
 release tags and absent Helm/kubeconform. Original working tree still has only
 its pre-existing untracked devcontainer lock file; all four unit trees clean.
+
+## Follow-up: malformed empty results are not measured zero (2026-11-14)
+
+Continued owner-authorized reliability work after initial report. A callable
+extractor returning empty string, bytes, mapping, set or iterator was silently
+coerced by the downstream list() conversion to a successful zero-citation
+observation. Five actual false-success shapes reproduced. None and malformed
+individual refs already errored differently; do not count these as additional
+false-success defects.
+
+Require an explicit list/tuple of nonblank string refs before record creation;
+then normalize to the builder's tuple contract. List support is explicit in the
+type alias. Existing URL schema validation remains unchanged. Legitimate empty
+list/tuple stays valid zero, while unknown/malformed results raise rather than
+becoming a metric. Added 9 negative and 4 positive regressions; relevant observer
+and security tests: 85 passed. Independent critic PASS; type/tuple consistency
+follow-up targeted suite: 24 passed. No parser accuracy/recall claim: a callable
+returning an incorrect but well-formed empty tuple is still undetectable without
+a trustworthy parser/source. Invalid extraction still leaves its previously
+stored raw artifact, but returns no successful observation (existing ordering).
+
+Final exact-code combined verification including type normalization: **6142
+passed, 45 skipped, 453 deselected, 2 warnings in 112.04 seconds**. Added tests
+now total 72 above the 6070 baseline. No new dependency or external observations.
