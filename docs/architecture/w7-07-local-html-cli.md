@@ -83,3 +83,16 @@ markers from nearest existing output ancestor to filesystem root: any marker
 is refused; only FileNotFoundError is ignored; permission errors fail closed.
 Git probing remains supplemental, not sole authority. Added helper-failure
 regression: final local CLI suite 21 passed. No global Git helper/policy changed.
+
+Final approved integration-branch verification (not just a temporary patch copy):
+**6229 passed, 45 skipped, 453 integration deselected, 2 warnings in 120.67s**.
+Baseline 6070, total added cases 159. Single nice-10 process, existing Python
+environment, no new dependencies. Independent final static review PASS; reviewer
+independently executed the prior 20 CLI cases, final 21 run by implementer.
+
+Branch integration/rapid7-local-readiness contains all six units and W7-07;
+code HEAD at validation 7e77efb. Original branch remains at 61e555e and its only
+pre-existing untracked devcontainer lock file is unchanged. No old evidence
+record modified. Missing historical-tag/tooling tests and excluded real-system
+integration remain unverified. No remote push, production deployment or customer
+search-performance observation took place.
