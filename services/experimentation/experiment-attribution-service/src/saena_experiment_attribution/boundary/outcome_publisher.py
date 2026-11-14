@@ -76,15 +76,20 @@ assembles the payload itself rather than receiving one already validated by
 
 from __future__ import annotations
 
+import math
+
 from pydantic import ValidationError
+from saena_domain.audit.canonical import canonical_json, sha256_hex
 from saena_domain.measurement.b_gate import (
     MIN_INDEPENDENT_LAYERS,
     BGateDecision,
     BVerdict,
     PolicyProvenance,
+    _max_independent_layers,
 )
 from saena_domain.measurement.did import DiDResult, SignalDiD
-from saena_domain.measurement.evidence import verify_manifest
+from saena_domain.measurement.evidence import EvidenceKind, validate_completeness, verify_manifest
+from saena_domain.measurement.outcome_layer import OutcomeLayer
 from saena_schemas.event.experiment_outcome_observed_v1 import (
     BVerdict as WireVerdict,
 )
@@ -159,7 +164,12 @@ class OutcomePublisher:
         self._check_engine_id(engine_id)
         if decision.verdict is BVerdict.PASS:
             self._enforce_pass_policy_gate(
-                tenant_id=tenant_id, decision=decision, manifest_hash=manifest_hash
+                tenant_id=tenant_id,
+                experiment_id=experiment_id,
+                decision=decision,
+                manifest_hash=manifest_hash,
+                did_result=did_result,
+                grs_policy=grs_policy,
             )
 
         per_signal_results = [self._per_signal_result(signal) for signal in did_result.signals]
@@ -194,11 +204,18 @@ class OutcomePublisher:
             )
 
     def _enforce_pass_policy_gate(
-        self, *, tenant_id: str, decision: BGateDecision, manifest_hash: str
+        self,
+        *,
+        tenant_id: str,
+        experiment_id: str,
+        decision: BGateDecision,
+        manifest_hash: str,
+        did_result: DiDResult,
+        grs_policy: GrsPolicy,
     ) -> None:
         reasons: list[str] = []
 
-        if len(decision.qualifying_layers) < MIN_INDEPENDENT_LAYERS:
+        if len(set(decision.qualifying_layers)) < MIN_INDEPENDENT_LAYERS:
             reasons.append("insufficient_qualifying_layers")
 
         manifest = self._manifest_lookup.lookup(tenant_id, manifest_hash)
@@ -208,6 +225,68 @@ class OutcomePublisher:
             verified, _divergence_index = verify_manifest(manifest)
             if not verified:
                 reasons.append("evidence_manifest_unverified")
+            if not validate_completeness(manifest)[0]:
+                reasons.append("evidence_manifest_incomplete")
+            if (
+                manifest.tenant_id != tenant_id
+                or manifest.experiment_id != experiment_id
+                or manifest.manifest_hash != manifest_hash
+            ):
+                reasons.append("evidence_manifest_identity_mismatch")
+
+            # Reuse the pipeline's canonical projections exactly. A complete
+            # bundle from a different measurement is not evidence for this one.
+            materials = {
+                EvidenceKind.DID_OUTPUTS: did_result.canonical_json(),
+                EvidenceKind.B_GATE_DECISION: decision.model_dump(mode="json"),
+            }
+            for kind, material in materials.items():
+                expected = "sha256:" + sha256_hex(canonical_json(material))
+                hashes = [
+                    entry.ref.content_hash for entry in manifest.entries if entry.kind is kind
+                ]
+                if hashes != [expected]:
+                    reasons.append(f"evidence_{kind.value}_hash_mismatch")
+
+        # A supplied PASS object must be supported by the actual measurement
+        # payload. This does not rerank signals or invent production thresholds.
+        supported_signals = [
+            signal
+            for signal in did_result.signals
+            if not signal.insufficient
+            and not signal.insufficiency_codes
+            and signal.net_of_control_lift is not None
+            and math.isfinite(signal.net_of_control_lift)
+            and signal.net_of_control_lift > 0
+            and all(
+                signal.sample_counts.get(cell, 0) > 0
+                for cell in (
+                    "baseline_treatment",
+                    "post_treatment",
+                    "baseline_control",
+                    "post_control",
+                )
+            )
+        ]
+        supported = {signal.layer for signal in supported_signals}
+        layers = {layer.value: layer for layer in OutcomeLayer}
+        edges = frozenset(
+            (layers[signal.layer], signal.evidence_basis_id)
+            for signal in supported_signals
+            if signal.layer in layers and layers[signal.layer] in decision.qualifying_layers
+        )
+        if len(_max_independent_layers(edges)) != len(set(decision.qualifying_layers)):
+            reasons.append("insufficient_independent_measurements")
+        if any(layer.value not in supported for layer in decision.qualifying_layers):
+            reasons.append("decision_not_supported_by_measurements")
+        if any(signal.insufficient or signal.insufficiency_codes for signal in did_result.signals):
+            reasons.append("measurement_inputs_insufficient")
+        if not (
+            did_result.policy_provenance
+            == getattr(decision.policy_provenance, "value", None)
+            == getattr(grs_policy.provenance, "value", None)
+        ):
+            reasons.append("mixed_policy_provenance")
 
         provenance_ok = decision.policy_provenance in _ALLOWED_PROVENANCE
         production_flag_consistent = decision.is_production == (

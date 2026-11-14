@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from saena_domain.audit.canonical import canonical_json, sha256_hex
 from saena_domain.measurement.b_gate import (
     BGateDecision,
     BVerdict,
@@ -21,7 +22,9 @@ from saena_domain.measurement.b_gate import (
     decide_b_verdict,
 )
 from saena_domain.measurement.confirmation import RegistrationView
+from saena_domain.measurement.did import CellObservation, DiDPolicy, SignalSeries, compute_did
 from saena_domain.measurement.evidence import (
+    REQUIRED_B_GATE_KINDS,
     EvidenceBundleManifest,
     EvidenceEntry,
     EvidenceKind,
@@ -173,15 +176,42 @@ def make_confirmation_store() -> InMemoryConfirmationStore:
 
 
 def make_evidence_manifest(
-    *, tenant_id: str = TENANT_A, run_id: str = RUN_ID, experiment_id: str = EXPERIMENT_ID
+    *,
+    tenant_id: str = TENANT_A,
+    run_id: str = RUN_ID,
+    experiment_id: str = EXPERIMENT_ID,
+    decision=None,
+    did_result=None,
 ) -> EvidenceBundleManifest:
-    entry = EvidenceEntry(
-        kind=EvidenceKind.B_GATE_DECISION,
-        ref=EvidenceRef(uri="mem://bundle/1", content_hash="sha256:" + "d" * 64),
-        metadata=EvidenceMetadata(),
+    # Synthetic values only; bind the same canonical projections as the pipeline.
+    decision = decision or make_passing_b_gate_decision()
+    did_result = did_result or make_did_result(decision)
+    hashes = {
+        EvidenceKind.DID_OUTPUTS: "sha256:"
+        + sha256_hex(canonical_json(did_result.canonical_json())),
+        EvidenceKind.B_GATE_DECISION: "sha256:"
+        + sha256_hex(canonical_json(decision.model_dump(mode="json"))),
+    }
+    # A positive fixture must be complete, not merely self-consistently hashed.
+    metadata = EvidenceMetadata(
+        timestamp="2026-07-12T00:00:00Z",
+        client_version="synthetic-fixture",
+        asset_hash="sha256:" + "d" * 64,
+        citation_present=False,
+    )
+    entries = tuple(
+        EvidenceEntry(
+            kind=kind,
+            ref=EvidenceRef(
+                uri=f"mem://bundle/{kind.value}",
+                content_hash=hashes.get(kind, "sha256:" + "d" * 64),
+            ),
+            metadata=metadata,
+        )
+        for kind in sorted(REQUIRED_B_GATE_KINDS, key=lambda kind: kind.value)
     )
     return EvidenceBundleManifest.seal(
-        tenant_id=tenant_id, run_id=run_id, experiment_id=experiment_id, entries=(entry,)
+        tenant_id=tenant_id, run_id=run_id, experiment_id=experiment_id, entries=entries
     )
 
 
@@ -265,3 +295,38 @@ __all__ = [
     "make_window",
     "now",
 ]
+
+
+def make_did_result(decision: BGateDecision):
+    """A synthetic but sufficient DiDResult supporting the claimed layers.
+    Positive report tests must not use missing data as successful evidence."""
+    policy = DiDPolicy(min_repeats=1, effect_threshold=0.0, provenance="test_fixture")
+    series = tuple(
+        SignalSeries(
+            layer=layer.value,
+            metric_id=f"metric-{i}",
+            evidence_basis_id=f"sha256:{i:064d}",
+            baseline_treatment=CellObservation(
+                repeat_values=(1.0,), timestamps=(datetime(2026, 7, 4, tzinfo=UTC),)
+            ),
+            post_treatment=CellObservation(
+                repeat_values=(3.0,), timestamps=(datetime(2026, 7, 6, tzinfo=UTC),)
+            ),
+            baseline_control=CellObservation(
+                repeat_values=(1.0,), timestamps=(datetime(2026, 7, 4, tzinfo=UTC),)
+            ),
+            post_control=CellObservation(
+                repeat_values=(1.0,), timestamps=(datetime(2026, 7, 6, tzinfo=UTC),)
+            ),
+        )
+        for i, layer in enumerate(
+            decision.qualifying_layers or decision.control_adjusted_view or ["citation"]
+        )
+    )
+    if not series:
+        series = (
+            SignalSeries(
+                layer="citation", metric_id="metric-0", evidence_basis_id="sha256:" + "0" * 64
+            ),
+        )
+    return compute_did(series, policy)
