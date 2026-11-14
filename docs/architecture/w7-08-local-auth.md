@@ -71,3 +71,8 @@ regressions across approved units). Dependency injection source paths explicitly
 selected this checkout and the isolated PyJWT/crypto install, not original code.
 Single nice15 test process, memory free observed 72% before and 71% during run;
 no Hanes model started, no parallel workload added. Ruff/diff checks pass.
+Follow-up trust-config hardening: PyJWT accepts issuer/audience collections,
+so type annotations alone did not enforce our single exact issuer/audience
+configuration contract. Reject non-string or blank issuer/audience at startup.
+Six regression cases added; console suite 109 passed in 0.77s; independent static
+review PASS. Normal values are not normalized, preserving exact comparison.

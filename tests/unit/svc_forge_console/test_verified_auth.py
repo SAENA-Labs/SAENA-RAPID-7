@@ -256,3 +256,28 @@ def test_conflicting_modes_refused(key):
         create_app(auth_mode="test_headers", token_verifier=verifier(key))
     with pytest.raises(ValueError):
         create_app(auth_mode="typo", token_verifier=verifier(key))
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("issuer", ["https://issuer.invalid", "other"]),
+        ("audience", ["saena-console"]),
+        ("issuer", " "),
+        ("audience", " "),
+        ("issuer", 123),
+        ("audience", 123),
+    ],
+)
+def test_trust_configuration_requires_single_exact_strings(key, field, value):
+    config = {
+        "public_key_pem": key.public_key().public_bytes(
+            serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+        ),
+        "issuer": "https://issuer.invalid",
+        "audience": "saena-console",
+        "memberships": {},
+    }
+    config[field] = value
+    with pytest.raises(ValueError, match="trust configuration"):
+        TokenVerifier(**config)
