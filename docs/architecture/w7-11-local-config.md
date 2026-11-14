@@ -126,3 +126,39 @@ shell/asset. No network server, real IdP, customer material or token/private-key
 file was created. Public fixture key and output reports remain local QA inputs.
 The browser interaction suite remains the earlier20 actual-Chromium scenarios;
 this demonstration did not repeat that browser suite or claim it did.
+
+## Remaining release plan (read-only planning, NOT implementation approval)
+
+P0 observation: obtain authorized, sanitized real ChatGPT Search samples for
+cited response, genuine zero, login, challenge and error; retain capture context,
+time/mode/query and source permission, never cookies or account credentials.
+Define parser accuracy and failure-vs-zero acceptance before implementing a real
+adapter. Existing accepted_stub or synthetic HTML are not provider integration.
+
+P0 identity: choose actual operator-approved IdP and issuer/audience/callbacks,
+key rotation/revocation policy and membership approver. Real session/login/BFF,
+CSRF/cookie/callback changes need a separate explicit security/API plan. Current
+pinned-key synthetic testing is NOT real IdP acceptance or public SaaS login.
+
+P0 data/operations: integrated RunStore remains in-memory and lineage a stub.
+W7-12 SQLite is separately checkpointed and NOT integrated: its independent
+re-review was blocked; do not reroute/retry that review. Persistence/backup,
+retention/deletion, deployment/TLS, monitoring, request limits and support process
+still need authorized design and verification. No public launch now.
+
+Acceptance before launch: clean-environment dependency installation, real approved
+IdP lifecycle, trusted source intake through report publication, customer access
+withdrawal, workload/resource budget and recoverability tests. Prior wheel162,
+Chromium20 and source6391 checks are useful but not substitutes for these gates.
+
+Unit economics: observations = queries * engines * repeats * daily frequency *
+days. Example30*1*2*2*7=840 proposed observations, NOT executed data. Cost includes
+provider unit price, retries, human review/correction hours, infrastructure,
+retention and support. No verified supplier price, failure rate or labor data
+exists, so price/margin/payback estimates are not established. Offline HTML audit
+avoids provider observations but is not zero-cost work.
+
+Current defensible offer: operator-reviewed supplied-HTML technical diagnosis and
+evidence report with explicit unknown/unmeasured states. Do not sell guaranteed
+citation lift, production login, deployed autonomous optimization, immutable audit
+history or full multitenant security based on these local checks alone.
