@@ -208,3 +208,15 @@ def test_shared_writable_output_ancestor_refused(setup, monkeypatch):
     monkeypatch.setenv("SAENA_PILOT_HOME", str(shared / "reports"))
     with pytest.raises(ValueError, match="trusted"):
         run(setup)
+
+
+def test_git_failure_cannot_hide_customer_repo_marker(setup, monkeypatch):
+    import saena_pilot.html_audit_cli as cli
+    from _pilot_fixtures import make_git_repo
+
+    customer = make_git_repo(setup[1].parent / "git-hidden")
+    monkeypatch.setenv("SAENA_PILOT_HOME", str(customer / "reports"))
+    monkeypatch.setattr(cli, "git_toplevel", lambda path: None)
+    with pytest.raises(ValueError, match="Git working trees"):
+        run(setup)
+    assert not (customer / "reports").exists()

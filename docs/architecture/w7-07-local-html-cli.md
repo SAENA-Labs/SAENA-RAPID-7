@@ -76,3 +76,10 @@ fails and makes no success claim. No old report is overwritten. Receipt binds th
 manifest bytes, report binds HTML bytes; neither proves external source truth.
 No provider observations, real index/citation improvement, API/authentication,
 remote push, deployment, schema migration or historical evidence rewrite.
+
+Independent reviewer executed 20 fixture tests successfully, then identified
+Git helper errors being treated as non-repository. Added explicit lstat of .git
+markers from nearest existing output ancestor to filesystem root: any marker
+is refused; only FileNotFoundError is ignored; permission errors fail closed.
+Git probing remains supplemental, not sole authority. Added helper-failure
+regression: final local CLI suite 21 passed. No global Git helper/policy changed.

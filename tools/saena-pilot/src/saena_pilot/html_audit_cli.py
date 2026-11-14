@@ -170,6 +170,13 @@ def generate_local_report(
     existing_parent = store
     while not existing_parent.exists():
         existing_parent = existing_parent.parent
+    for ancestor in (existing_parent, *existing_parent.parents):
+        try:
+            os.lstat(ancestor / ".git")
+        except FileNotFoundError:
+            continue
+        # Any marker type is refused; permission errors propagate fail-closed.
+        raise ValueError("report store must be outside all Git working trees")
     if git_toplevel(existing_parent) is not None:
         raise ValueError("report store must be outside all Git working trees")
     # Reject symlinked configured store, not only its resolved destination.
