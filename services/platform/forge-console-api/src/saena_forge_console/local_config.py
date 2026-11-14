@@ -14,6 +14,7 @@ from saena_domain.authz import Role
 
 from saena_forge_console.app import create_app
 from saena_forge_console.report_store import ReportCatalog, ReportEntry, _json, _parts, _trusted_dir
+from saena_forge_console.sqlite_run_store import LocalStoreError, SQLiteRunStore
 from saena_forge_console.verified_auth import Membership, TokenVerifier
 
 CONFIG_LIMIT = 1024 * 1024
@@ -89,11 +90,12 @@ class LocalConfiguration:
     catalog: ReportCatalog
     enable_viewer: bool
     member_count: int
+    run_store: SQLiteRunStore | None = None
 
     def check(self):
         for entry in self.catalog.entries.values():
             self.catalog.read(entry)
-        return {
+        result = {
             "status": "ok",
             "scope": "local_configuration_and_artifacts_only",
             "members": self.member_count,
@@ -101,11 +103,17 @@ class LocalConfiguration:
             "viewer_enabled": self.enable_viewer,
             "live_observation_verified": False,
         }
+        if self.run_store is not None:
+            result["run_store"] = self.run_store.check()
+        return result
 
     def app(self):
         # Fail startup on stale/corrupt artifacts rather than expose a broken viewer.
         self.check()
+        if self.run_store is not None:
+            self.run_store.initialize()
         return create_app(
+            run_store=self.run_store,
             token_verifier=self.verifier,
             report_catalog=self.catalog,
             enable_report_viewer=self.enable_viewer,
@@ -120,6 +128,11 @@ def load_configuration(path: str) -> LocalConfiguration:
         fd = _directory(str(p.parent))
         try:
             config = _json(_file(fd, p.name, CONFIG_LIMIT))
+            if not isinstance(config, dict):
+                raise ValueError("object required")
+            version = config.get("version")
+            if type(version) is not int or version not in {1, 2}:
+                raise ValueError("unsupported version")
             _object(
                 config,
                 {
@@ -133,10 +146,9 @@ def load_configuration(path: str) -> LocalConfiguration:
                     "report_root",
                     "reports",
                     "enable_viewer",
-                },
+                }
+                | ({"run_store"} if version == 2 else set()),
             )
-            if type(config["version"]) is not int or config["version"] != 1:
-                raise ValueError("unsupported version")
             tenant = _text(config["tenant_id"])
             if tenant != os.environ.get("SAENA_TENANT_ID"):
                 raise ValueError("tenant environment mismatch")
@@ -196,10 +208,27 @@ def load_configuration(path: str) -> LocalConfiguration:
                 audience=_text(config["audience"]),
                 memberships=members,
             )
-            return LocalConfiguration(verifier, catalog, config["enable_viewer"], len(members))
+            store = None
+            if version == 2:
+                setting = _object(config["run_store"], {"kind", "directory"})
+                if setting["kind"] != "sqlite":
+                    raise ValueError("unsupported store")
+                store = SQLiteRunStore(_text(setting["directory"]), tenant)
+                store.check()
+            return LocalConfiguration(
+                verifier, catalog, config["enable_viewer"], len(members), store
+            )
         finally:
             os.close(fd)
-    except (OSError, ValueError, TypeError, KeyError, RecursionError, OverflowError):
+    except (
+        OSError,
+        ValueError,
+        TypeError,
+        KeyError,
+        RecursionError,
+        OverflowError,
+        LocalStoreError,
+    ):
         raise ConfigurationError("local configuration unavailable or invalid") from None
 
 
@@ -207,7 +236,15 @@ def create_local_app():
     """ASGI factory. Reads only the explicit SAENA_LOCAL_CONFIG absolute path."""
     try:
         return load_configuration(os.environ.get("SAENA_LOCAL_CONFIG", "")).app()
-    except (OSError, ValueError, TypeError, KeyError, RecursionError, OverflowError):
+    except (
+        OSError,
+        ValueError,
+        TypeError,
+        KeyError,
+        RecursionError,
+        OverflowError,
+        LocalStoreError,
+    ):
         raise ConfigurationError("local configuration unavailable or invalid") from None
 
 
@@ -220,7 +257,15 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         result = load_configuration(args.config).check()
-    except (OSError, ValueError, TypeError, KeyError, RecursionError, OverflowError):
+    except (
+        OSError,
+        ValueError,
+        TypeError,
+        KeyError,
+        RecursionError,
+        OverflowError,
+        LocalStoreError,
+    ):
         print("local configuration unavailable or invalid", file=sys.stderr)
         return 2
     print(json.dumps(result, sort_keys=True))
